@@ -8,16 +8,15 @@ const PORT = process.env.PORT;
 const bodyParser = require('body-parser');
 APP.use(bodyParser.urlencoded({ extended: true }));
 
+////// templates, public
 const path = require('path');
 APP.set('views', path.join(__dirname, 'templates'));
 APP.set('view engine', 'ejs');
-
-// 정적 파일 라이브러리 추가
 APP.use(express.static('public'));
+////////////////////
 
 ////// Database
 const mongoclient = require('mongodb').MongoClient;
-const ObjId = require('mongodb').ObjectId;
 const DB_URI = dotenv.parsed.DB_URI;
 let mydb;
 
@@ -31,61 +30,13 @@ mongoclient.connect(DB_URI).then(client => {
 });
 ////////////////////
 
-////// Session
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+////// Session 및 Passport 설정
+const session = require('express-session');
+const routes_session = require('./routes/session');
 
-let session = require('express-session');
-const MongoStore = require('connect-mongo');
-const sha = require('sha256');
-
-APP.use(session({
-    secret: 'dkufe8938493j4e08349u',
-    resave: false,
-    saveUninitialized: true,
-    store: MongoStore.create({
-        mongoUrl: DB_URI
-    })
-}));
-APP.use(passport.initialize());
-APP.use(passport.session());
-
-passport.serializeUser(function (user, done) {
-    // console.log('serializeUser');
-    // console.log(user.userid);
-    done(null, user.userid);
-});
-
-passport.deserializeUser(function (puserid, done) {
-    // console.log('deserializeUser');
-    // console.log(puserid);
-    mydb.collection('account').findOne({ userid: puserid }).then((result) => {
-        // console.log(result);
-        done(null, result);
-    });
-});
-
-passport.use(new LocalStrategy({
-    usernameField: "userid",
-    passwordField: "userpw",
-    session: true,
-    passReqToCallback: false,
-}, function (inputid, inputpw, done) {
-    mydb.collection('account').findOne({ userid: inputid }).then((result) => {
-        if (result == null) {
-            done(null, false, { message: "아이디가 존재하지 않습니다" });
-            return;
-        }
-
-        if (result.userpw == sha(inputpw)) {
-            // console.log('새로운 로그인');
-            done(null, result);
-            return;
-        }
-
-        done(null, false, { message: "비밀번호 틀렸어요" });
-    });
-}));
+APP.use(session(routes_session.sessionConfig));
+APP.use(routes_session.passport.initialize());
+APP.use(routes_session.passport.session());
 ////////////////////
 
 ////// Routes
