@@ -3,6 +3,7 @@ const APP = express();
 
 const dotenv = require('dotenv').config();
 const PORT = process.env.PORT;
+const HOST = process.env.HOST;
 
 const bodyParser = require('body-parser');
 APP.use(bodyParser.urlencoded({ extended: true }));
@@ -23,7 +24,7 @@ let mydb;
 mongoclient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
     APP.listen(PORT, function () {
-        console.log(`SERVER READY! http://127.0.0.1:${PORT}`);
+        console.log(`SERVER READY! http://${HOST}:${PORT}`);
     });
 }).catch((err) => {
     console.log(err);
