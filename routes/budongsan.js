@@ -110,71 +110,85 @@ router.post('/budongsan/delete', function (req, res) {
 });
 
 router.post('/budongsan/selling', function (req, res) {
-    const USERID = 'abcd';
+    if (req.session.passport == undefined) {
+        res.redirect('/login');
+        return;
+    }
+
+    const USERID = req.session.passport.user;
     req.body._id = new ObjId(req.body._id);
     mydb.collection('budongsan').findOne({ _id: req.body._id }).then((result) => {
         if (result == null) {
             res.send('존재하지 않습니다.');
+            return;
         }
 
         let budongsan = result;
-        mydb.collection('account').findOne({ userid: USERID }).then((result) => {
+        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
             if (result == null) {
                 res.send('존재하지 않습니다.');
+                return;
             }
 
             let my_account = result;
             if (budongsan.selling_price > my_account.account_balance) {
                 res.send(`${budongsan.selling_price - my_account.account_balance}원이 부족합니다.`);
+                return;
             }
-            else {
-                // budongsan 삭제 delete
-                mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
 
-                // account_balance update
-                mydb.collection('account').updateOne({ _id: my_account._id }, {
-                    $set: { account_balance: my_account.account_balance - budongsan.selling_price }
-                }).then((result) => {
-                    res.redirect('/budongsan');  // 매매 구매 완료
-                }).catch(err => {
-                    console.log(err);
-                });
-            }
+            // budongsan 삭제 delete
+            mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
+
+            // account_balance update
+            mydb.collection('account').updateOne({ _id: my_account._id }, {
+                $set: { account_balance: my_account.account_balance - budongsan.selling_price }
+            }).then((result) => {
+                res.redirect('/budongsan');  // 매매 구매 완료
+            }).catch(err => {
+                console.log(err);
+            });
         });
     });
 });
 
 router.post('/budongsan/jeonse/', function (req, res) {
-    const USERID = 'abcd';
+    if (req.session.passport == undefined) {
+        res.redirect('/login');
+        return;
+    }
+    
+    const USERID = req.session.passport.user;
     req.body._id = new ObjId(req.body._id);
     mydb.collection('budongsan').findOne({ _id: req.body._id }).then((result) => {
         if (result == null) {
             res.send('존재하지 않습니다.');
+            return;
         }
 
         let budongsan = result;
         mydb.collection('account').findOne({ userid: USERID }).then((result) => {
             if (result == null) {
                 res.send('존재하지 않습니다.');
+                return;
             }
 
             let my_account = result;
             if (budongsan.jeonse_price > my_account.account_balance) {
                 res.send(`${budongsan.jeonse_price - my_account.account_balance}원이 부족합니다.`);
+                return;
             }
-            else {
-                // budongsan 삭제 delete
-                mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
 
-                // account_balance update
-                mydb.collection('account').updateOne({ _id: my_account._id }, {
-                    $set: { account_balance: my_account.account_balance - budongsan.jeonse_price }
-                }).then((result) => {
-                    res.redirect('/budongsan');  // 전세 구매 완료
-                }).catch(err => {
-                    console.log(err);
-                });
-            }
+            // budongsan 삭제 delete
+            mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
+
+            // account_balance update
+            mydb.collection('account').updateOne({ _id: my_account._id }, {
+                $set: { account_balance: my_account.account_balance - budongsan.jeonse_price }
+            }).then((result) => {
+                res.redirect('/budongsan');  // 전세 구매 완료
+            }).catch(err => {
+                console.log(err);
+            });
         });
     });
 });

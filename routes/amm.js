@@ -15,7 +15,12 @@ mongoclient.connect(DB_URI).then(client => {
 
 ////// 자산관리 AMM
 router.get('/amm', function (req, res) {
-    const USERID = 'abcd';
+    if (req.session.passport == undefined) {
+        res.redirect('/login');
+        return;
+    }
+
+    const USERID = req.session.passport.user;
     mydb.collection('account').findOne({ userid: USERID }).then((result) => {
         res.render('amm.ejs', { user: result });
     }).catch(err => {
@@ -43,6 +48,7 @@ router.post('/amm/credit/submit', function (req, res) {
     mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
         if (result == null) {
             res.send('고객님의 계정은 존재하지 않습니다.');
+            return;
         }
 
         let my_account = result;
@@ -50,26 +56,25 @@ router.post('/amm/credit/submit', function (req, res) {
         mydb.collection('account').findOne({ account_number: other_account_number }).then((result) => {
             if (result == null) {
                 res.send(`(${other_account_number}) 존재하지 않는 계좌번호 입니다.`);
+                return;
             }
-            else {
-                other_account = result;
+            other_account = result;
 
-                // update my_account
-                mydb.collection('account').updateOne({ _id: my_account._id }, {
-                    $set: { account_balance: my_account.account_balance - other_account_balance }
+            // update my_account
+            mydb.collection('account').updateOne({ _id: my_account._id }, {
+                $set: { account_balance: my_account.account_balance - other_account_balance }
+            }).then((result) => {
+                // update other_account
+                mydb.collection('account').updateOne({ _id: other_account._id }, {
+                    $set: { account_balance: other_account.account_balance + other_account_balance }
                 }).then((result) => {
-                    // update other_account
-                    mydb.collection('account').updateOne({ _id: other_account._id }, {
-                        $set: { account_balance: other_account.account_balance + other_account_balance }
-                    }).then((result) => {
-                        res.redirect('/amm');  // Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
-                    }).catch(err => {
-                        console.log(err);
-                    });
+                    res.redirect('/amm');  // Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
                 }).catch(err => {
                     console.log(err);
                 });
-            }
+            }).catch(err => {
+                console.log(err);
+            });
         });
 
         // console.log(`result: ${result}`);
@@ -98,6 +103,7 @@ router.post('/amm/debit/submit', function (req, res) {
     mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
         if (result == null) {
             res.send('고객님의 계정은 존재하지 않습니다.');
+            return;
         }
 
         let my_account = result;
