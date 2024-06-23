@@ -7,8 +7,8 @@ const sha = require('sha256');
 ////// Database
 const mongoclient = require('mongodb').MongoClient;
 const DB_URI = process.env.DB_URI;
-
 let mydb;
+
 mongoclient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
 }).catch((err) => {
@@ -48,7 +48,7 @@ passport.use(new LocalStrategy({
         }
 
         if (result.userpw == sha(inputpw)) {
-            return done(null, result); // 새로운 로그인
+            return done(null, result);  // 새로운 로그인
         }
 
         return done(null, false, { message: "비밀번호 틀렸어요" });

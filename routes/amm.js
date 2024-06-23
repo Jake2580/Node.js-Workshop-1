@@ -110,9 +110,9 @@ router.post('/amm/debit/submit', function (req, res) {
             return;
         }
 
-        let my_account = result;
-        mydb.collection('account').updateOne({ _id: my_account._id }, {
-            $set: { account_balance: my_account.account_balance - withdraw }
+        let session_user = result;
+        mydb.collection('account').updateOne({ _id: session_user._id }, {
+            $set: { account_balance: session_user.account_balance - withdraw }
         }).then((result) => {
             res.redirect('/amm');
         }).catch(err => {

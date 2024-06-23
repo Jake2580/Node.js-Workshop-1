@@ -65,11 +65,22 @@ router.get('/budongsan/:_id', function (req, res) {
         return res.status(400).send('Invalid ObjectId format');
     }
 
+    let seller = false;
     req.params._id = new ObjId(req.params._id);
     mydb.collection('budongsan').findOne({ _id: req.params._id }).then((result) => {
-        result.selling_price = format.formatNumber(result.selling_price);
-        result.jeonse_price = format.formatNumber(result.jeonse_price);
-        res.render('budongsan_content.ejs', { data: result });
+        let budongsan = result;
+        if (req.session.passport != undefined) {
+            mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
+                const session_user = result;
+                if (session_user._id.toString() == budongsan.seller || session_user.userid == 'admin') {
+                    seller = true;
+                }
+
+                budongsan.selling_price = format.formatNumber(budongsan.selling_price);
+                budongsan.jeonse_price = format.formatNumber(budongsan.jeonse_price);
+                res.render('budongsan_content.ejs', { data: budongsan, seller: seller });
+            });
+        }
     }).catch(err => {
         console.log(err);
         res.status(500).send();
@@ -146,7 +157,6 @@ router.post('/budongsan/selling', function (req, res) {
         return;
     }
 
-    const USERID = req.session.passport.user;
     req.body._id = new ObjId(req.body._id);
     mydb.collection('budongsan').findOne({ _id: req.body._id }).then((result) => {
         if (result == null) {
@@ -161,22 +171,28 @@ router.post('/budongsan/selling', function (req, res) {
                 return;
             }
 
-            let my_account = result;
-            if (budongsan.selling_price > my_account.account_balance) {
-                res.send(`${budongsan.selling_price - my_account.account_balance}원이 부족합니다.`);
+            let session_user = result;
+            if (budongsan.selling_price > session_user.account_balance) {
+                res.send(`${budongsan.selling_price - session_user.account_balance}원이 부족합니다.`);
                 return;
             }
 
-            // budongsan 삭제 delete
-            mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
+            // budongsan delete
+            mydb.collection('budongsan').deleteOne(budongsan).then(result => {});
 
-            // account_balance update
-            mydb.collection('account').updateOne({ _id: my_account._id }, {
-                $set: { account_balance: my_account.account_balance - budongsan.selling_price }
-            }).then((result) => {
-                res.redirect('/budongsan');  // 매매 구매 완료
-            }).catch(err => {
-                console.log(err);
+            // session_user account_balance update
+            mydb.collection('account').updateOne({ _id: session_user._id }, {
+                $set: { account_balance: session_user.account_balance - budongsan.selling_price }
+            }).then((result) => {});
+
+            // seller account_balance update
+            const seller_id = new ObjId(budongsan.seller);
+            mydb.collection('account').findOne({ _id: seller_id }).then((result) => {
+                mydb.collection('account').updateOne({ _id: seller_id }, {
+                    $set: { account_balance: result.account_balance + budongsan.selling_price }
+                }).then((result) => {
+                    res.redirect('/budongsan');
+                });
             });
         });
     });
@@ -215,10 +231,16 @@ router.post('/budongsan/jeonse/', function (req, res) {
             // account_balance update
             mydb.collection('account').updateOne({ _id: my_account._id }, {
                 $set: { account_balance: my_account.account_balance - budongsan.jeonse_price }
-            }).then((result) => {
-                res.redirect('/budongsan');  // 전세 구매 완료
-            }).catch(err => {
-                console.log(err);
+            }).then((result) => {});
+
+            // seller account_balance update
+            const seller_id = new ObjId(budongsan.seller);
+            mydb.collection('account').findOne({ _id: seller_id }).then((result) => {
+                mydb.collection('account').updateOne({ _id: seller_id }, {
+                    $set: { account_balance: result.account_balance + budongsan.jeonse_price }
+                }).then((result) => {
+                    res.redirect('/budongsan');
+                });
             });
         });
     });
