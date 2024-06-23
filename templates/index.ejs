@@ -11,30 +11,45 @@
 </head>
 
 <body>
-<%- include('menu.ejs') %>
-    <center>Home!
+    <%- include('menu.ejs') %>
+    <section class="container my-5">
         <% if(user){ %>
-            <h3>반갑습니다. <%= user.user %>님.</h3>
-            <a href="/logout">로그아웃</a>
+        <div class="row justify-content-center">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body text-center">
+                <h3 class="card-title">반갑습니다. <%= user.user %>님.</h3>
+                <a href="/logout" class="btn btn-danger btn-block">로그아웃</a>
+              </div>
+            </div>
+          </div>
+        </div>
         <% } else { %>
-        <h3>로그인 해주세요</h3>
-        <p></p>
-        <button class="w-100 btn btn-warning login"><b>로그인</b></button>
-        <p></p>
-        <button class="w-100 btn btn-success signup"><b>회원가입</b></button>
+        <div class="row justify-content-center">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body text-center">
+                <h3 class="card-title">당신은 잘 오다.</h3>
+                <button class="btn btn-warning btn-block login"><b>로그인</b></button>
+                <button class="btn btn-success btn-block signup"><b>회원가입</b></button>
+              </div>
+            </div>
+          </div>
+        </div>
         <% }%>
-    </center>
+      </section>
+      
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script>
-    $('.login').click(function(e){
-        location.href = '/login';
-    });
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $('.login').click(function(e){
+            location.href = '/login';
+        });
 
-    $('.signup').click(function(e){
-        location.href = '/signup';
-    });
-</script>
+        $('.signup').click(function(e){
+            location.href = '/signup';
+        });
+    </script>
 </body>
 
 </html>
