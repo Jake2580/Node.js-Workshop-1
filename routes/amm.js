@@ -4,8 +4,8 @@ let router = require('express').Router();
 const mongoclient = require('mongodb').MongoClient;
 const ObjId = require('mongodb').ObjectId;
 const DB_URI = process.env.DB_URI;
-
 let mydb;
+
 mongoclient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
 }).catch((err) => {
