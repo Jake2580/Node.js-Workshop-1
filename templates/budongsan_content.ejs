@@ -12,39 +12,45 @@
 
 <body>
   <%- include('menu.ejs') %>
-  <h1>상세내용</h1>
   <div class="container mt-4">
-    <div class="card" style="width:100%;">
+    <div class="card">
       <div class="card-header">
         <h4 class="card-title"><%= data.title %></h4>
       </div>
       <div class="card-body">
-        <p class="card-text"><%= data.address %> <%= data.city %></p>
-        <p class="card-text">매매가: <%= data.selling_price %></p>
-        <p class="card-text">전세가: <%= data.jeonse_price %></p>
-        <p class="card-subtitle mb-2">작성일: <%= data.updated_at %></p>
+        <div class="row">
+          <div class="col-md-6">
+            <p class="card-text"><%= data.address %> <%= data.city %></p>
+          </div>
+          <div class="col-md-6">
+            <p class="card-text">매매가: <%= data.selling_price %>원</p>
+            <p class="card-text">전세가: <%= data.jeonse_price %>원</p>
+          </div>
+        </div>
+        <br><br>
+        <p class="card-subtitle mb-2 text-muted">작성일: <%= data.updated_at %></p>
         <br>
-        <form action="/budongsan/edit/<%= data._id %>" method="GET">
-          <button type="submit" class="card-link">수정</button>
-        </form>
+        <div class="d-flex justify-content-start">
+          <a href="/budongsan/edit/<%= data._id %>" class="btn btn-primary mr-2">수정</a>
+          <form action="/budongsan/delete" method="POST" class="mr-2">
+            <input type="hidden" name="_id" value="<%= data._id %>">
+            <button type="submit" class="btn btn-danger">삭제</button>
+          </form>
+        </div>
         <br>
-        <form action="/budongsan/delete" method="POST">
-          <input type="hidden" name="_id" value="<%= data._id %>">
-          <button type="submit" class="card-link">삭제</button>
-        </form>
-        <br>
-        <form action="/budongsan/selling" method="POST">
-          <input type="hidden" name="_id" value="<%= data._id %>">
-          <button type="submit" class="card-link">매매가 구매하기</button>
-        </form>
-        <br>
-        <form action="/budongsan/jeonse" method="POST">
-          <input type="hidden" name="_id" value="<%= data._id %>">
-          <button type="submit" class="card-link">전세가 구매하기</button>
-        </form>
+        <div class="d-flex justify-content-start">
+          <form action="/budongsan/selling" method="POST" class="mr-2">
+            <input type="hidden" name="_id" value="<%= data._id %>">
+            <button type="submit" class="btn btn-success">매매가 구매하기</button>
+          </form>
+          <form action="/budongsan/jeonse" method="POST">
+            <input type="hidden" name="_id" value="<%= data._id %>">
+            <button type="submit" class="btn btn-warning">전세가 구매하기</button>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
+  </div>  
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"

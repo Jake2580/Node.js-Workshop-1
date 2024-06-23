@@ -28,28 +28,37 @@ router.get('/budongsan/enter', function (req, res) {
 });
 
 router.post('/budongsan/save', function (req, res) {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
+    if (!req.session.passport) {
+        res.render('login.ejs');
+        return;
+    }
 
-    mydb.collection('budongsan').insertOne({
-        title: req.body.title,
-        address: req.body.address,
-        city: req.body.city,
-        seller: "66745b35543603f50098ba0b",
-        selling_price: req.body.selling_price,
-        jeonse_price: req.body.jeonse_price,
-        updated_at: formattedDate,
-    }).then((result) => {
+    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
+        let seller_object = result;
 
-    }).catch(err => {
-        console.log(err);
-        res.status(500).send();
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        
+        mydb.collection('budongsan').insertOne({
+            title: req.body.title,
+            address: req.body.address,
+            city: req.body.city,
+            seller: seller_object._id.toString(),
+            selling_price: Number(req.body.selling_price),
+            jeonse_price: Number(req.body.jeonse_price),
+            updated_at: formattedDate,
+        }).then((result) => {
+            
+        }).catch(err => {
+            console.log(err);
+            res.status(500).send();
+        });
+    
+        res.redirect('/budongsan');
     });
-
-    res.redirect('/budongsan');
 });
 
 router.get('/budongsan/:_id', function (req, res) {
@@ -156,7 +165,7 @@ router.post('/budongsan/jeonse/', function (req, res) {
         res.redirect('/login');
         return;
     }
-    
+
     const USERID = req.session.passport.user;
     req.body._id = new ObjId(req.body._id);
     mydb.collection('budongsan').findOne({ _id: req.body._id }).then((result) => {

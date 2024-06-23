@@ -2,8 +2,8 @@ const express = require('express')
 const APP = express();
 
 const dotenv = require('dotenv').config();
-const PORT = process.env.PORT;
 const HOST = process.env.HOST;
+const PORT = process.env.PORT;
 
 const bodyParser = require('body-parser');
 APP.use(bodyParser.urlencoded({ extended: true }));
@@ -74,17 +74,17 @@ passport.use(new LocalStrategy({
     mydb.collection('account').findOne({ userid: inputid }).then((result) => {
         if (result == null) {
             done(null, false, { message: "아이디가 존재하지 않습니다" });
+            return;
         }
-        else {
-            if (result.userpw == sha(inputpw)) {
-                // console.log('새로운 로그인');
-                done(null, result);
-            }
-            else {
-                done(null, false, { message: "비밀번호 틀렸어요" });
-            }
+
+        if (result.userpw == sha(inputpw)) {
+            // console.log('새로운 로그인');
+            done(null, result);
+            return;
         }
-    })
+
+        done(null, false, { message: "비밀번호 틀렸어요" });
+    });
 }));
 ////////////////////
 
