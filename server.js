@@ -71,12 +71,17 @@ passport.use(new LocalStrategy({
     passReqToCallback: false,
 }, function (inputid, inputpw, done) {
     mydb.collection('account').findOne({ userid: inputid }).then((result) => {
-        if (result.userpw == sha(inputpw)) {
-            // console.log('새로운 로그인');
-            done(null, result);
+        if (result == null) {
+            done(null, false, { message: "아이디가 존재하지 않습니다" });
         }
         else {
-            done(null, false, { message: "비밀번호 틀렸어요" });
+            if (result.userpw == sha(inputpw)) {
+                // console.log('새로운 로그인');
+                done(null, result);
+            }
+            else {
+                done(null, false, { message: "비밀번호 틀렸어요" });
+            }
         }
     })
 }));
