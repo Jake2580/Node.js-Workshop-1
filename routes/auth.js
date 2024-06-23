@@ -17,6 +17,33 @@ mongoclient.connect(DB_URI).then(client => {
 const passport = require('passport');
 ////////////////////
 
+////// Other
+const sha = require('sha256');
+
+function generateRandomAccountNumber() {
+    let accountNumber = '';
+    for (let i = 0; i < 12; i++) {
+        accountNumber += Math.floor(Math.random() * 10);
+    }
+    return accountNumber;
+}
+
+async function generateUniqueAccountNumber() {
+    let account_number, result;
+    while (true) {
+        account_number = generateRandomAccountNumber();
+        try {
+            result = await mydb.collection('account').findOne({ account_number: account_number });
+            if (!result) {
+                return account_number;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+}
+///////////////////
+
 ////// Auth
 router.get('/login', function (req, res) {
     if (req.session.passport) {
@@ -40,19 +67,25 @@ router.get('/signup', function (req, res) {
     res.render('signup.ejs');
 });
 
-router.post('/signup', function (req, res) {
-    mydb.collection('account').insertOne({
-        userid: req.body.userid,
-        userpw: sha(req.body.userpw),
-        account_number: "0",
-        email: req.body.useremail,
-        account_balance: 0,
-        birthday: req.body.userbirthday,
-    }).then((result) => {
-        // console.log('회원가입 성공');
-    });
+router.post('/signup', async function (req, res) {
+    try {
+        const account_number = await generateUniqueAccountNumber();
+        await mydb.collection('account').insertOne({
+            userid: req.body.userid,
+            userpw: sha(req.body.userpw),
+            account_number: account_number,
+            email: req.body.useremail,
+            account_balance: 0,
+            birthday: req.body.userbirthday,
+        }).then((result) => {
+            // console.log('회원가입 성공');
+        });
 
-    res.redirect('/');
+        res.redirect('/');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('회원가입 실패');
+    }
 });
 ////////////////////
 

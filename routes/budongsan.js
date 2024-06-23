@@ -77,9 +77,25 @@ router.get('/budongsan/:_id', function (req, res) {
 });
 
 router.get('/budongsan/edit/:_id', function (req, res) {
+    if (!req.session.passport) {
+        res.render('login.ejs');
+        return;
+    }
+
     req.params._id = new ObjId(req.params._id);
     mydb.collection('budongsan').findOne({ _id: req.params._id }).then((result) => {
-        res.render('budongsan_edit.ejs', { data: result });
+        let req_userid = req.session.passport.user;
+        let budongsan_object = result;
+        mydb.collection('account').findOne({ userid: req_userid }).then((result) => {
+            let req_id = result._id.toString();
+            let seller = budongsan_object.seller;
+            if (req_id != seller && req_userid != 'admin') {
+                res.send('당신은 권한이 없습니다.');
+                return;
+            }
+    
+            res.render('budongsan_edit.ejs', { data: budongsan_object });
+        });
     }).catch(err => {
         console.log(err);
         res.status(500).send();
@@ -112,9 +128,24 @@ router.post('/budongsan/edit', function (req, res) {
 });
 
 router.post('/budongsan/delete', function (req, res) {
-    req.body._id = new ObjId(req.body._id);
-    mydb.collection('budongsan').deleteOne(req.body).then((result) => {
-        res.redirect('/budongsan');  // 삭제 완료
+    if (!req.session.passport) {
+        res.render('login.ejs');
+        return;
+    }
+
+    let req_userid = req.session.passport.user;
+    mydb.collection('account').findOne({ userid: req_userid }).then((result) => {
+        let req_id = result._id.toString();
+        let seller = req.body.seller;
+        if (req_id != seller && req_userid != 'admin') {
+            res.send('당신은 권한이 없습니다.');
+            return;
+        }
+
+        req.body._id = new ObjId(req.body._id);
+        mydb.collection('budongsan').deleteOne(req.body).then((result) => {
+            res.redirect('/budongsan');  // 삭제 완료
+        });
     });
 });
 
