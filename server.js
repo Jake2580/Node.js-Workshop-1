@@ -8,12 +8,12 @@ const PORT = process.env.PORT;
 const bodyParser = require('body-parser');
 APP.use(bodyParser.urlencoded({ extended: true }));
 
+////// templates, public
 const path = require('path');
 APP.set('views', path.join(__dirname, 'templates'));
 APP.set('view engine', 'ejs');
-
-// 정적 파일 라이브러리 추가
 APP.use(express.static('public'));
+////////////////////
 
 ////// Database
 const mongoclient = require('mongodb').MongoClient;
@@ -51,16 +51,11 @@ APP.use(passport.initialize());
 APP.use(passport.session());
 
 passport.serializeUser(function (user, done) {
-    // console.log('serializeUser');
-    // console.log(user.userid);
     done(null, user.userid);
 });
 
 passport.deserializeUser(function (puserid, done) {
-    // console.log('deserializeUser');
-    // console.log(puserid);
     mydb.collection('account').findOne({ userid: puserid }).then((result) => {
-        // console.log(result);
         done(null, result);
     });
 });
@@ -73,17 +68,14 @@ passport.use(new LocalStrategy({
 }, function (inputid, inputpw, done) {
     mydb.collection('account').findOne({ userid: inputid }).then((result) => {
         if (result == null) {
-            done(null, false, { message: "아이디가 존재하지 않습니다" });
-            return;
+            return done(null, false, { message: "아이디가 존재하지 않습니다" });;
         }
 
         if (result.userpw == sha(inputpw)) {
-            // console.log('새로운 로그인');
-            done(null, result);
-            return;
+            return done(null, result); // 새로운 로그인
         }
 
-        done(null, false, { message: "비밀번호 틀렸어요" });
+        return done(null, false, { message: "비밀번호 틀렸어요" });
     });
 }));
 ////////////////////
@@ -94,7 +86,7 @@ APP.use('/', require('./routes/budongsan.js'));
 APP.use('/', require('./routes/auth.js'));
 ////////////////////
 
-////// Home
+////// server route
 APP.get('/', function (req, res) {
     let user;
     if (req.session.passport) { user = req.session.passport; } else { user = req.user; }

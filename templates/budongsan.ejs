@@ -22,13 +22,15 @@
           <table class="table table-hover table-striped text-center">
             <thead>
               <tr class="bg-light">
-                <th>제목</th>
-                <th>내용</th>
+                <th>이름</th>
+                <th>주소</th>
+                <th>매매가</th>
+                <th>전세가</th>
                 <th>날짜</th>
               </tr>
             </thead>
             <tbody>
-              <% for(let i=0; i < data.length; i++) {%>
+              <% for(let i = 0; i < data.length; i++) {%>
               <tr>
                 <td>
                   <a href="/budongsan/<%= data[i]._id %>" class="text-primary font-weight-bold">
@@ -36,6 +38,8 @@
                   </a>
                 </td>
                 <td><%= data[i].address %>, <%= data[i].city %></td>
+                <td><%= data[i].selling_price %></td>
+                <td><%= data[i].jeonse_price %></td>
                 <td><%= data[i].updated_at %></td>
               </tr>
               <% }%>

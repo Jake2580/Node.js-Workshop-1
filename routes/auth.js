@@ -47,7 +47,8 @@ async function generateUniqueAccountNumber() {
 ////// Auth
 router.get('/login', function (req, res) {
     if (req.session.passport) {
-        res.render('index.ejs', { user: req.session.passport });
+        // res.render('index.ejs', { user: req.session.passport });
+        res.redirect('/');
     } else {
         res.render('login.ejs');
     }
@@ -55,12 +56,12 @@ router.get('/login', function (req, res) {
 
 router.post('/login', passport.authenticate('local', { failureRedirect: '/fail', }),
     function (req, res) {
-        res.render('index.ejs', { user: req.session.passport })
+        res.redirect('/');
     });
 
 router.get('/logout', function (req, res) {
     req.session.destroy();
-    res.render('index.ejs', { user: null });
+    res.redirect('/');
 });
 
 router.get('/signup', function (req, res) {
@@ -78,10 +79,9 @@ router.post('/signup', async function (req, res) {
             account_balance: 0,
             birthday: req.body.userbirthday,
         }).then((result) => {
-            // console.log('회원가입 성공');
+            res.redirect('/');  // 회원가입 성공
         });
 
-        res.redirect('/');
     } catch (err) {
         console.error(err);
         res.status(500).send('회원가입 실패');

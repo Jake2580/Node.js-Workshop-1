@@ -13,15 +13,19 @@ mongoclient.connect(DB_URI).then(client => {
 });
 ////////////////////
 
+////// Other
+const format = require('../utils/format.js')
+////////////////////
+
 ////// 자산관리 AMM
 router.get('/amm', function (req, res) {
-    if (req.session.passport == undefined) {
+    if (!req.session.passport) {
         res.redirect('/login');
         return;
     }
 
-    const USERID = req.session.passport.user;
-    mydb.collection('account').findOne({ userid: USERID }).then((result) => {
+    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
+        result.account_balance = format.formatNumber(result.account_balance);
         res.render('amm.ejs', { user: result });
     }).catch(err => {
         console.log(err);
@@ -32,7 +36,7 @@ router.get('/amm', function (req, res) {
 router.post('/amm/credit', function (req, res) {
     req.body.userid = new ObjId(req.body.userid);
     mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
-        // console.log(`result: ${result}`);
+        result.account_balance = format.formatNumber(result.account_balance);
         res.render('amm_credit.ejs', { user: result });
     }).catch(err => {
         console.log(err);
@@ -88,7 +92,7 @@ router.post('/amm/credit/submit', function (req, res) {
 router.post('/amm/debit', function (req, res) {
     req.body.userid = new ObjId(req.body.userid);
     mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
-        // console.log(`result: ${result}`);
+        result.account_balance = format.formatNumber(result.account_balance);
         res.render('amm_debit.ejs', { user: result });
     }).catch(err => {
         console.log(err);

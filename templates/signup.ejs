@@ -47,29 +47,86 @@
     <body>
         <%- include('menu.ejs') %>
 
-        <form action="/signup" method="post">
+        <form action="/signup" method="post" onsubmit="return validateForm()">
             <div class="form-container">
-                <div class="mb-3">
-                    <label for="exampleFormControlInput1" class="form-label">아이디</label>
-                    <input name="userid" type="text" class="form-control" id="exampleFormControlInput1" >
-                </div>
-                <div class="mb-3">
-                    <label for="exampleFormControlTextarea1" class="form-label">비밀번호</label>
-                    <input name="userpw" type="password" class="form-control" id="exampleFormControlInput1" >
-                </div>
-                <div class="mb-3">
-                    <label for="exampleFormControlInput1" class="form-label">이메일</label>
-                    <input name="useremail" type="email" class="form-control" id="exampleFormControlInput1" >
-                </div>
-                <div class="mb-3">
-                    <label for="exampleFormControlInput1" class="form-label">생년원일 ex) 240623</label>
-                    <input name="userbirthday" type="text" class="form-control" id="exampleFormControlInput1" >
-                </div>
-                <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary">가입</button>
-                </div>
+              <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">아이디</label>
+                <input name="userid" type="text" class="form-control" id="exampleFormControlInput1" required>
+                <div id="idError" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">비밀번호</label>
+                <input name="userpw" type="password" class="form-control" id="exampleFormControlInput1" required>
+                <div id="passwordError" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">이메일</label>
+                <input name="useremail" type="email" class="form-control" id="exampleFormControlInput1" required>
+                <div id="emailError" class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">생년월일 ex) 240623</label>
+                <input name="userbirthday" type="text" pattern="\d{6}" class="form-control" id="exampleFormControlInput1" required>
+                <div id="birthdayError" class="invalid-feedback"></div>
+              </div>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">가입</button>
+              </div>
             </div>
-        </form>
+          </form>
+
+        <script>
+            function validateForm() {
+                let isValid = true;
+
+                const idInput = document.querySelector('input[name="userid"]');
+                const idError = document.getElementById('idError');
+                if (idInput.value.length < 4) {
+                    idError.textContent = '아이디는 4자리 이상으로 입력해주세요.';
+                    idInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    idError.textContent = '';
+                    idInput.classList.remove('is-invalid');
+                }
+
+                const passwordInput = document.querySelector('input[name="userpw"]');
+                const passwordError = document.getElementById('passwordError');
+                if (passwordInput.value.length < 4) {
+                    passwordError.textContent = '비밀번호는 4자리 이상으로 입력해주세요.';
+                    passwordInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    passwordError.textContent = '';
+                    passwordInput.classList.remove('is-invalid');
+                }
+
+                const emailInput = document.querySelector('input[name="useremail"]');
+                const emailError = document.getElementById('emailError');
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(emailInput.value)) {
+                    emailError.textContent = '이메일 형식이 올바르지 않습니다.';
+                    emailInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    emailError.textContent = '';
+                    emailInput.classList.remove('is-invalid');
+                }
+
+                const birthdayInput = document.querySelector('input[name="userbirthday"]');
+                const birthdayError = document.getElementById('birthdayError');
+                if (birthdayInput.value.length !== 6 || isNaN(birthdayInput.value)) {
+                    birthdayError.textContent = '생년월일은 6자리 숫자로 입력해주세요.';
+                    birthdayInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    birthdayError.textContent = '';
+                    birthdayInput.classList.remove('is-invalid');
+                }
+
+                return isValid;
+            }
+        </script>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     </body>

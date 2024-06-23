@@ -13,9 +13,17 @@ mongoclient.connect(DB_URI).then(client => {
 });
 ////////////////////
 
+////// Other
+const format = require('../utils/format.js')
+////////////////////
+
 ////// 부동산
 router.get('/budongsan', function (req, res) {
     mydb.collection('budongsan').find().toArray().then(result => {
+        for (let i = 0; i < result.length; i++) {
+            result[i].selling_price = format.formatNumber(result[i].selling_price);
+            result[i].jeonse_price = format.formatNumber(result[i].jeonse_price);
+        }
         res.render('budongsan.ejs', { data: result });
     }).catch(err => {
         console.log(err);
@@ -29,19 +37,12 @@ router.get('/budongsan/enter', function (req, res) {
 
 router.post('/budongsan/save', function (req, res) {
     if (!req.session.passport) {
-        res.render('login.ejs');
+        res.redirect('/login');
         return;
     }
 
     mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
         let seller_object = result;
-
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const formattedDate = `${year}-${month}-${day}`;
-        
         mydb.collection('budongsan').insertOne({
             title: req.body.title,
             address: req.body.address,
@@ -49,15 +50,13 @@ router.post('/budongsan/save', function (req, res) {
             seller: seller_object._id.toString(),
             selling_price: Number(req.body.selling_price),
             jeonse_price: Number(req.body.jeonse_price),
-            updated_at: formattedDate,
+            updated_at: format.getCurrentDateString(),
         }).then((result) => {
-            
+            res.redirect('/budongsan');
         }).catch(err => {
             console.log(err);
             res.status(500).send();
         });
-    
-        res.redirect('/budongsan');
     });
 });
 
@@ -68,7 +67,8 @@ router.get('/budongsan/:_id', function (req, res) {
 
     req.params._id = new ObjId(req.params._id);
     mydb.collection('budongsan').findOne({ _id: req.params._id }).then((result) => {
-        // console.log(result);
+        result.selling_price = format.formatNumber(result.selling_price);
+        result.jeonse_price = format.formatNumber(result.jeonse_price);
         res.render('budongsan_content.ejs', { data: result });
     }).catch(err => {
         console.log(err);
@@ -78,7 +78,7 @@ router.get('/budongsan/:_id', function (req, res) {
 
 router.get('/budongsan/edit/:_id', function (req, res) {
     if (!req.session.passport) {
-        res.render('login.ejs');
+        res.redirect('/login');
         return;
     }
 
@@ -104,13 +104,6 @@ router.get('/budongsan/edit/:_id', function (req, res) {
 
 router.post('/budongsan/edit', function (req, res) {
     req.body._id = new ObjId(req.body._id);
-
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
-
     mydb.collection('budongsan').updateOne({ _id: req.body._id }, {
         $set: {
             title: req.body.title,
@@ -118,7 +111,7 @@ router.post('/budongsan/edit', function (req, res) {
             city: req.body.city,
             selling_price: Number(req.body.selling_price),
             jeonse_price: Number(req.body.jeonse_price),
-            updated_at: formattedDate,
+            updated_at: format.getCurrentDateString(),
         }
     }).then((result) => {
         res.redirect('/budongsan');
@@ -129,15 +122,13 @@ router.post('/budongsan/edit', function (req, res) {
 
 router.post('/budongsan/delete', function (req, res) {
     if (!req.session.passport) {
-        res.render('login.ejs');
+        res.redirect('/login');
         return;
     }
 
     let req_userid = req.session.passport.user;
     mydb.collection('account').findOne({ userid: req_userid }).then((result) => {
-        let req_id = result._id.toString();
-        let seller = req.body.seller;
-        if (req_id != seller && req_userid != 'admin') {
+        if (result._id.toString() != req.body.seller && req_userid != 'admin') {
             res.send('당신은 권한이 없습니다.');
             return;
         }
@@ -150,7 +141,7 @@ router.post('/budongsan/delete', function (req, res) {
 });
 
 router.post('/budongsan/selling', function (req, res) {
-    if (req.session.passport == undefined) {
+    if (!req.session.passport) {
         res.redirect('/login');
         return;
     }
@@ -192,7 +183,7 @@ router.post('/budongsan/selling', function (req, res) {
 });
 
 router.post('/budongsan/jeonse/', function (req, res) {
-    if (req.session.passport == undefined) {
+    if (!req.session.passport) {
         res.redirect('/login');
         return;
     }

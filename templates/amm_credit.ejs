@@ -54,11 +54,11 @@
                 </div>
                 <div class="mb-3">
                     <label for="exampleFormControlInput1" class="form-label">계좌번호</label>
-                    <input name="other_account_number" type="text" class="form-control" id="exampleFormControlInput1" >
+                    <input name="other_account_number" type="number" class="form-control" id="exampleFormControlInput1" >
                 </div>
                 <div class="mb-3">
                     <label for="exampleFormControlTextarea1" class="form-label">입금할 금액</label>
-                    <input name="other_account_balance" type="text" class="form-control" id="exampleFormControlInput1" >
+                    <input name="other_account_balance" type="number" class="form-control" id="exampleFormControlInput1" >
                 </div>
                 <input type="hidden" name="userid" value="<%= user._id %>">
                 <button type="submit" class="btn btn-custom">입금</button>
