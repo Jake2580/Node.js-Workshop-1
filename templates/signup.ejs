@@ -49,31 +49,31 @@
 
         <form action="/signup" method="post" onsubmit="return validateForm()">
             <div class="form-container">
-              <div class="mb-3">
-                <label for="exampleFormControlInput1" class="form-label">아이디</label>
-                <input name="userid" type="text" class="form-control" id="exampleFormControlInput1" required>
+                <div class="mb-3">
+                    <label for="exampleFormControlInput1" class="form-label">아이디</label>
+                    <input name="userid" type="text" class="form-control" id="exampleFormControlInput1" required>
                 <div id="idError" class="invalid-feedback"></div>
-              </div>
-              <div class="mb-3">
-                <label for="exampleFormControlInput1" class="form-label">비밀번호</label>
-                <input name="userpw" type="password" class="form-control" id="exampleFormControlInput1" required>
-                <div id="passwordError" class="invalid-feedback"></div>
-              </div>
-              <div class="mb-3">
-                <label for="exampleFormControlInput1" class="form-label">이메일</label>
-                <input name="useremail" type="email" class="form-control" id="exampleFormControlInput1" required>
-                <div id="emailError" class="invalid-feedback"></div>
-              </div>
-              <div class="mb-3">
-                <label for="exampleFormControlInput1" class="form-label">생년월일 ex) 240623</label>
-                <input name="userbirthday" type="text" pattern="\d{6}" class="form-control" id="exampleFormControlInput1" required>
-                <div id="birthdayError" class="invalid-feedback"></div>
-              </div>
-              <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary">가입</button>
-              </div>
+                </div>
+                <div class="mb-3">
+                    <label for="exampleFormControlInput1" class="form-label">비밀번호</label>
+                    <input name="userpw" type="password" class="form-control" id="exampleFormControlInput1" required>
+                    <div id="passwordError" class="invalid-feedback"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="exampleFormControlInput1" class="form-label">이메일</label>
+                    <input name="useremail" type="email" class="form-control" id="exampleFormControlInput1" required>
+                    <div id="emailError" class="invalid-feedback"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="exampleFormControlInput1" class="form-label">생년월일 ex) 240623</label>
+                    <input name="userbirthday" type="text" pattern="\d{6}" class="form-control" id="exampleFormControlInput1" required>
+                    <div id="birthdayError" class="invalid-feedback"></div>
+                </div>
+                    <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">가입</button>
+                </div>
             </div>
-          </form>
+        </form>
 
         <script>
             function validateForm() {

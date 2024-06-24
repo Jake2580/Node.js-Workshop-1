@@ -1,4 +1,3 @@
-const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
@@ -17,7 +16,7 @@ mongoclient.connect(DB_URI).then(client => {
 ////////////////////
 
 ////// Session
-const sessionConfig = {
+const session_config = {
     secret: 'dkufe8938493j4e08349u',
     resave: false,
     saveUninitialized: true,
@@ -56,5 +55,5 @@ passport.use(new LocalStrategy({
 }));
 ////////////////////
 
-module.exports.sessionConfig = sessionConfig;
+module.exports.session_config = session_config;
 module.exports.passport = passport;

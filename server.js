@@ -1,4 +1,4 @@
-const express = require('express')
+const express = require('express');
 const APP = express();
 
 const dotenv = require('dotenv').config();
@@ -34,15 +34,15 @@ mongoclient.connect(DB_URI).then(client => {
 const session = require('express-session');
 const routes_session = require('./routes/session');
 
-APP.use(session(routes_session.sessionConfig));
+APP.use(session(routes_session.session_config));
 APP.use(routes_session.passport.initialize());
 APP.use(routes_session.passport.session());
 ////////////////////
 
 ////// Routes
-APP.use('/', require('./routes/amm.js'));
-APP.use('/', require('./routes/budongsan.js'));
-APP.use('/', require('./routes/auth.js'));
+APP.use('/', require('./routes/amm'));
+APP.use('/', require('./routes/budongsan'));
+APP.use('/', require('./routes/auth'));
 ////////////////////
 
 ////// Home

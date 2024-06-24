@@ -81,7 +81,6 @@ router.post('/signup', async function (req, res) {
         }).then((result) => {
             res.redirect('/');  // 회원가입 성공
         });
-
     } catch (err) {
         console.error(err);
         res.status(500).send('회원가입 실패');
