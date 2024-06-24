@@ -1,12 +1,12 @@
 let router = require('express').Router();
 
 ////// Database
-const mongoclient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 const ObjId = require('mongodb').ObjectId;
 const DB_URI = process.env.DB_URI;
 let mydb;
 
-mongoclient.connect(DB_URI).then(client => {
+MongoClient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
 }).catch((err) => {
     console.log(err);
@@ -33,6 +33,11 @@ router.get('/budongsan', function (req, res) {
 });
 
 router.get('/budongsan/enter', function (req, res) {
+    if (!req.session.passport) {
+        res.redirect('/login');
+        return;
+    }
+    
     res.render('budongsan_enter.ejs');
 });
 
@@ -64,20 +69,24 @@ router.get('/budongsan/:_id', function (req, res) {
     if (req.params._id.length !== 24) {
         return res.status(400).send('Invalid ObjectId format');
     }
-
+    
     let seller = false;
     req.params._id = new ObjId(req.params._id);
-    mydb.collection('budongsan').findOne({ _id: req.params._id }).then((budongsan) => {
-        if (req.session.passport != undefined) {
-            mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
-                if (session_user._id.toString() == budongsan.seller || session_user.userid == 'admin') {
-                    seller = true;
-                }
-
-                budongsan.selling_price = format.formatNumber(budongsan.selling_price);
-                budongsan.jeonse_price = format.formatNumber(budongsan.jeonse_price);
-                res.render('budongsan_content.ejs', { data: budongsan, seller: seller });
-            });
+    mydb.collection('budongsan').findOne({ _id: req.params._id }).then(async (budongsan) => {
+        try {
+            if (req.session.passport) {
+                await mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
+                    if (session_user._id.toString() == budongsan.seller || session_user.userid == 'admin') {
+                        seller = true;
+                    }
+                });
+            }
+            
+            budongsan.selling_price = format.formatNumber(budongsan.selling_price);
+            budongsan.jeonse_price = format.formatNumber(budongsan.jeonse_price);
+            res.render('budongsan_content.ejs', { data: budongsan, seller: seller });
+        } catch (err) {
+            console.log(err);
         }
     }).catch(err => {
         console.log(err);
