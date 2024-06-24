@@ -7,6 +7,7 @@ const PORT = process.env.PORT;
 
 const bodyParser = require('body-parser');
 APP.use(bodyParser.urlencoded({ extended: true }));
+APP.use(bodyParser.json());  // /check-id POST 요청 시 필요함
 
 ////// templates, public
 const path = require('path');
@@ -16,11 +17,11 @@ APP.use(express.static('public'));
 ////////////////////
 
 ////// Database
-const mongoclient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 const DB_URI = dotenv.parsed.DB_URI;
 let mydb;
 
-mongoclient.connect(DB_URI).then(client => {
+MongoClient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
     APP.listen(PORT, function () {
         console.log(`SERVER READY! http://${HOST}:${PORT}`);
