@@ -24,9 +24,9 @@ router.get('/amm', function (req, res) {
         return;
     }
 
-    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((result) => {
-        result.account_balance = format.formatNumber(result.account_balance);
-        res.render('amm.ejs', { user: result });
+    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
+        session_user.account_balance = format.formatNumber(session_user.account_balance);
+        res.render('amm.ejs', { user: session_user });
     }).catch(err => {
         console.log(err);
         res.status(500).send();
@@ -35,9 +35,9 @@ router.get('/amm', function (req, res) {
 
 router.post('/amm/credit', function (req, res) {
     req.body.userid = new ObjId(req.body.userid);
-    mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
-        result.account_balance = format.formatNumber(result.account_balance);
-        res.render('amm_credit.ejs', { user: result });
+    mydb.collection('account').findOne({ _id: req.body.userid }).then((session_user) => {
+        session_user.account_balance = format.formatNumber(session_user.account_balance);
+        res.render('amm_credit.ejs', { user: session_user });
     }).catch(err => {
         console.log(err);
         res.status(500).send();
@@ -90,10 +90,9 @@ router.post('/amm/credit/submit', function (req, res) {
 });
 
 router.post('/amm/debit', function (req, res) {
-    req.body.userid = new ObjId(req.body.userid);
-    mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
-        result.account_balance = format.formatNumber(result.account_balance);
-        res.render('amm_debit.ejs', { user: result });
+    mydb.collection('account').findOne({ _id: new ObjId(req.body.userid) }).then((session_user) => {
+        session_user.account_balance = format.formatNumber(session_user.account_balance);
+        res.render('amm_debit.ejs', { user: session_user });
     }).catch(err => {
         console.log(err);
         res.status(500).send();
@@ -101,18 +100,14 @@ router.post('/amm/debit', function (req, res) {
 });
 
 router.post('/amm/debit/submit', function (req, res) {
-    let withdraw = req.body.withdraw;
-    req.body.userid = new ObjId(req.body.userid);
-
-    mydb.collection('account').findOne({ _id: req.body.userid }).then((result) => {
-        if (result == null) {
+    mydb.collection('account').findOne({ _id: new ObjId(req.body.userid) }).then((session_user) => {
+        if (session_user == null) {
             res.send('고객님의 계정은 존재하지 않습니다.');
             return;
         }
 
-        let session_user = result;
         mydb.collection('account').updateOne({ _id: session_user._id }, {
-            $set: { account_balance: session_user.account_balance - withdraw }
+            $set: { account_balance: session_user.account_balance - req.body.withdraw }
         }).then((result) => {
             res.redirect('/amm');
         }).catch(err => {
