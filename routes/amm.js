@@ -1,12 +1,12 @@
 let router = require('express').Router();
 
 ////// Database
-const mongoclient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 const ObjId = require('mongodb').ObjectId;
 const DB_URI = process.env.DB_URI;
 let mydb;
 
-mongoclient.connect(DB_URI).then(client => {
+MongoClient.connect(DB_URI).then(client => {
     mydb = client.db('myboard');
 }).catch((err) => {
     console.log(err);
