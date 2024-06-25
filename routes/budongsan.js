@@ -15,6 +15,22 @@ MongoClient.connect(DB_URI).then(client => {
 
 ////// Other
 const format = require('../utils/format.js')
+const budongsan_generator = require('../utils/budongsan-generator.js');
+////////////////////
+
+////// Generator
+router.get('/budongsan/generator/:size', async function (req, res) {
+    length = Number(req.params.size);
+    if (length == NaN || length < 1) {
+        res.send('제대로 입력해주세요.');
+        return;
+    }
+
+    budongsans = budongsan_generator.generateApartmentsData(length);
+    result = await mydb.collection('budongsan').insertMany(budongsans);
+    res.send(result);
+});
+
 ////////////////////
 
 ////// 부동산
@@ -24,7 +40,7 @@ router.get('/budongsan', function (req, res) {
             results[i].selling_price = format.formatNumber(results[i].selling_price);
             results[i].jeonse_price = format.formatNumber(results[i].jeonse_price);
         }
-
+        
         res.render('budongsan.ejs', { data: results });
     }).catch(err => {
         console.log(err);
@@ -58,7 +74,7 @@ router.post('/budongsan/save', function (req, res) {
             updated_at: format.getCurrentDateString(),
         }).then((result) => {
             res.redirect('/budongsan');
-        }).catch(err => {
+        }).catch((err) => {
             console.log(err);
             res.status(500).send();
         });
