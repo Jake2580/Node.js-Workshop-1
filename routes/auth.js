@@ -73,6 +73,10 @@ router.post('/signup', async function (req, res) {
         if (result != null) {
             return res.status(500).send('중복되는 아이디입니다.');
         }
+
+        if (req.body.userpw.length < 4 || req.body.userid.length < 4) {
+            return res.status(500).send('아이디와 비밀번호는 4자리 이상으로 해주세요.');
+        }
         
         try {
             const account_number = await generateUniqueAccountNumber();
@@ -101,9 +105,9 @@ router.post('/check-id', async (req, res) => {
             res.json({ isDuplicate: true });
             return;
         }
-
+        
         const existingUser = await mydb.collection('account').findOne({ userid: req.body.userid });
-
+        
         if (existingUser) {
             res.json({ isDuplicate: true });
         } else {
