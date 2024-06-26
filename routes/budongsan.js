@@ -20,6 +20,16 @@ const budongsan_generator = require('../utils/budongsan-generator.js');
 
 ////// Generator
 router.get('/budongsan/generator/:size', async function (req, res) {
+    if (!req.session.passport) {
+        res.redirect('/login');
+        return;
+    }
+
+    if (req.session.passport.user != 'admin') {
+        res.send('당신은 권한이 없습니다.');
+        return;
+    }
+
     length = Number(req.params.size);
     if (length == NaN || length < 1) {
         res.send('제대로 입력해주세요.');
@@ -30,21 +40,27 @@ router.get('/budongsan/generator/:size', async function (req, res) {
     result = await mydb.collection('budongsan').insertMany(budongsans);
     res.send(result);
 });
-
 ////////////////////
 
 ////// 부동산
 router.get('/budongsan', function (req, res) {
-    mydb.collection('budongsan').find().toArray().then(results => {
-        for (let i = 0; i < results.length; i++) {
-            results[i].selling_price = format.formatNumber(results[i].selling_price);
-            results[i].jeonse_price = format.formatNumber(results[i].jeonse_price);
-        }
-        
-        res.render('budongsan.ejs', { data: results });
-    }).catch(err => {
-        console.log(err);
-        res.status(500).send();
+    let currentPage = Number(req.query.page);
+    if (!currentPage) {
+        currentPage = 1;
+    }
+
+    const itemsPerPage = 50;  // 한번에 얼만큼의 게시물을 뿌려줄 것인가.
+    const paginationWindowSize = 15;  // 맨 아래에 있는 2번째 페이지 크기 설정
+    const skipCount = (currentPage - 1) * itemsPerPage;
+    mydb.collection('budongsan').find().sort({ updated_at: -1 }).skip(skipCount).limit(itemsPerPage).toArray().then((budongsans) => {
+        mydb.collection('budongsan').countDocuments({}).then((budongsanCount) => {
+            let pageSize = Math.ceil(budongsanCount / itemsPerPage);  // 최대 페이지 크기
+            let startNumber = (Math.floor((currentPage - 1) / paginationWindowSize) * paginationWindowSize) + 1;  // 페이지의 첫 숫자
+            res.render('budongsan.ejs', { 
+                data: budongsans,
+                number: { currentPage, pageSize, startNumber, paginationWindowSize },
+            });
+        });
     });
 });
 
@@ -53,7 +69,7 @@ router.get('/budongsan/enter', function (req, res) {
         res.redirect('/login');
         return;
     }
-    
+
     res.render('budongsan_enter.ejs');
 });
 
@@ -63,12 +79,12 @@ router.post('/budongsan/save', function (req, res) {
         return;
     }
 
-    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((seller_user) => {
+    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sellerUser) => {
         mydb.collection('budongsan').insertOne({
             title: req.body.title,
             address: req.body.address,
             city: req.body.city,
-            seller: seller_user._id.toString(),
+            seller: sellerUser._id.toString(),
             selling_price: Number(req.body.selling_price),
             jeonse_price: Number(req.body.jeonse_price),
             updated_at: format.getCurrentDateString(),
@@ -85,19 +101,18 @@ router.get('/budongsan/:_id', function (req, res) {
     if (req.params._id.length !== 24) {
         return res.status(400).send('Invalid ObjectId format');
     }
-    
+
     let seller = false;
-    req.params._id = new ObjId(req.params._id);
-    mydb.collection('budongsan').findOne({ _id: req.params._id }).then(async (budongsan) => {
+    mydb.collection('budongsan').findOne({ _id: new ObjId(req.params._id) }).then(async (budongsan) => {
         try {
             if (req.session.passport) {
-                await mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
-                    if (session_user._id.toString() == budongsan.seller || session_user.userid == 'admin') {
+                await mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
+                    if (sessionUser._id.toString() == budongsan.seller || sessionUser.userid == 'admin') {
                         seller = true;
                     }
                 });
             }
-            
+
             budongsan.selling_price = format.formatNumber(budongsan.selling_price);
             budongsan.jeonse_price = format.formatNumber(budongsan.jeonse_price);
             res.render('budongsan_content.ejs', { data: budongsan, seller: seller });
@@ -112,19 +127,16 @@ router.get('/budongsan/:_id', function (req, res) {
 
 router.get('/budongsan/edit/:_id', function (req, res) {
     if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+        return res.redirect('/login');
     }
 
-    req.params._id = new ObjId(req.params._id);
-    mydb.collection('budongsan').findOne({ _id: req.params._id }).then((budongsan) => {
-        let req_userid = req.session.passport.user;
-        mydb.collection('account').findOne({ userid: req_userid }).then((session_user) => {
-            if (session_user._id.toString() != budongsan.seller && req_userid != 'admin') {
-                res.send('당신은 권한이 없습니다.');
-                return;
+    mydb.collection('budongsan').findOne({ _id: new ObjId(req.params._id) }).then((budongsan) => {
+        let userid = req.session.passport.user;
+        mydb.collection('account').findOne({ userid }).then((sessionUser) => {
+            if (sessionUser._id.toString() != budongsan.seller && userid != 'admin') {
+                return res.send('당신은 권한이 없습니다.');
             }
-    
+
             res.render('budongsan_edit.ejs', { data: budongsan });
         });
     }).catch(err => {
@@ -156,15 +168,14 @@ router.post('/budongsan/delete', function (req, res) {
         return;
     }
 
-    let req_userid = req.session.passport.user;
-    mydb.collection('account').findOne({ userid: req_userid }).then((session_user) => {
-        if (session_user._id.toString() != req.body.seller && req_userid != 'admin') {
-            res.send('당신은 권한이 없습니다.');
-            return;
+    let userid = req.session.passport.user;
+    mydb.collection('account').findOne({ userid }).then((sessionUser) => {
+        if (sessionUser._id.toString() != req.body.seller && userid != 'admin') {
+            return res.send('당신은 권한이 없습니다.');
         }
-
+        
         req.body._id = new ObjId(req.body._id);
-        mydb.collection('budongsan').deleteOne(req.body).then((result) => {
+        mydb.collection('budongsan').deleteOne(req.body).then((deleteResult) => {
             res.redirect('/budongsan');  // 삭제 완료
         });
     });
@@ -182,30 +193,30 @@ router.post('/budongsan/selling', function (req, res) {
             return;
         }
 
-        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
-            if (session_user == null) {
+        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
+            if (sessionUser == null) {
                 res.send('존재하지 않습니다.');
                 return;
             }
 
-            if (budongsan.selling_price > session_user.account_balance) {
-                res.send(`${budongsan.selling_price - session_user.account_balance}원이 부족합니다.`);
+            if (budongsan.selling_price > sessionUser.account_balance) {
+                res.send(`${budongsan.selling_price - sessionUser.account_balance}원이 부족합니다.`);
                 return;
             }
 
             // budongsan delete
-            mydb.collection('budongsan').deleteOne(budongsan).then(result => {});
+            mydb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
 
             // session_user account_balance update
-            mydb.collection('account').updateOne({ _id: session_user._id }, {
-                $set: { account_balance: session_user.account_balance - budongsan.selling_price }
-            }).then((result) => {});
+            mydb.collection('account').updateOne({ _id: sessionUser._id }, {
+                $set: { account_balance: sessionUser.account_balance - budongsan.selling_price }
+            }).then((updateResult) => { });
 
             // seller account_balance update
-            const seller_id = new ObjId(budongsan.seller);
-            mydb.collection('account').findOne({ _id: seller_id }).then((seller_user) => {
-                mydb.collection('account').updateOne({ _id: seller_id }, {
-                    $set: { account_balance: seller_user.account_balance + budongsan.selling_price }
+            const _id = new ObjId(budongsan.seller);
+            mydb.collection('account').findOne({ _id }).then((sellerUser) => {
+                mydb.collection('account').updateOne({ _id }, {
+                    $set: { account_balance: sellerUser.account_balance + budongsan.selling_price }
                 }).then((result) => {
                     res.redirect('/budongsan');
                 });
@@ -226,29 +237,29 @@ router.post('/budongsan/jeonse/', function (req, res) {
             return;
         }
 
-        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((session_user) => {
-            if (session_user == null) {
+        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
+            if (sessionUser == null) {
                 res.redirect('/');  // 세션 유저의 계정이 존재하지 않음
                 return;
             }
 
-            if (budongsan.jeonse_price > session_user.account_balance) {
-                res.send(`${budongsan.jeonse_price - session_user.account_balance}원이 부족합니다.`);
+            if (budongsan.jeonse_price > sessionUser.account_balance) {
+                res.send(`${budongsan.jeonse_price - sessionUser.account_balance}원이 부족합니다.`);
                 return;
             }
 
             // budongsan delete
-            mydb.collection('budongsan').deleteOne(budongsan).then(result => { });
+            mydb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
 
             // account_balance update
-            mydb.collection('account').updateOne({ _id: session_user._id }, {
-                $set: { account_balance: session_user.account_balance - budongsan.jeonse_price }
-            }).then((result) => {});
+            mydb.collection('account').updateOne({ _id: sessionUser._id }, {
+                $set: { account_balance: sessionUser.account_balance - budongsan.jeonse_price }
+            }).then((updateResult) => { });
 
             // seller account_balance update
-            const seller_id = new ObjId(budongsan.seller);
-            mydb.collection('account').findOne({ _id: seller_id }).then((seller) => {
-                mydb.collection('account').updateOne({ _id: seller_id }, {
+            const _id = new ObjId(budongsan.seller);
+            mydb.collection('account').findOne({ _id }).then((seller) => {
+                mydb.collection('account').updateOne({ _id }, {
                     $set: { account_balance: seller.account_balance + budongsan.jeonse_price }
                 }).then((result) => {
                     res.redirect('/budongsan');
