@@ -14,8 +14,8 @@ MongoClient.connect(DB_URI).then(client => {
 ////////////////////
 
 ////// Other
-const format = require('../utils/format.js')
-const budongsan_generator = require('../utils/budongsan-generator.js');
+const Format = require('../utils/format')
+const BudongsanGenerator = require('../utils/budongsan-generator');
 ////////////////////
 
 ////// Generator
@@ -30,13 +30,13 @@ router.get('/budongsan/generator/:size', async function (req, res) {
         return;
     }
 
-    length = Number(req.params.size);
+    const length = Number(req.params.size);
     if (length == NaN || length < 1) {
         res.send('제대로 입력해주세요.');
         return;
     }
 
-    budongsans = budongsan_generator.generateApartmentsData(length);
+    budongsans = BudongsanGenerator.generateApartmentsData(length);
     result = await mydb.collection('budongsan').insertMany(budongsans);
     res.send(result);
 });
@@ -87,7 +87,7 @@ router.post('/budongsan/save', function (req, res) {
             seller: sellerUser._id.toString(),
             selling_price: Number(req.body.selling_price),
             jeonse_price: Number(req.body.jeonse_price),
-            updated_at: format.getCurrentDateString(),
+            updated_at: Format.getCurrentDateString(),
         }).then((result) => {
             res.redirect('/budongsan');
         }).catch((err) => {
@@ -113,8 +113,8 @@ router.get('/budongsan/:_id', function (req, res) {
                 });
             }
 
-            budongsan.selling_price = format.formatNumber(budongsan.selling_price);
-            budongsan.jeonse_price = format.formatNumber(budongsan.jeonse_price);
+            budongsan.selling_price = Format.formatNumber(budongsan.selling_price);
+            budongsan.jeonse_price = Format.formatNumber(budongsan.jeonse_price);
             res.render('budongsan_content.ejs', { data: budongsan, seller: seller });
         } catch (err) {
             console.log(err);
@@ -153,7 +153,7 @@ router.post('/budongsan/edit', function (req, res) {
             city: req.body.city,
             selling_price: Number(req.body.selling_price),
             jeonse_price: Number(req.body.jeonse_price),
-            updated_at: format.getCurrentDateString(),
+            updated_at: Format.getCurrentDateString(),
         }
     }).then((result) => {
         res.redirect('/budongsan');
@@ -183,25 +183,21 @@ router.post('/budongsan/delete', function (req, res) {
 
 router.post('/budongsan/selling', function (req, res) {
     if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+        return res.redirect('/login');
     }
 
     mydb.collection('budongsan').findOne({ _id: new ObjId(req.body._id) }).then((budongsan) => {
         if (budongsan == null) {
-            res.send('존재하지 않습니다.');
-            return;
+            return res.send('해당 매물은 존재하지 않습니다.');
         }
 
         mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
             if (sessionUser == null) {
-                res.send('존재하지 않습니다.');
-                return;
+                return res.redirect('/login');
             }
 
             if (budongsan.selling_price > sessionUser.account_balance) {
-                res.send(`${budongsan.selling_price - sessionUser.account_balance}원이 부족합니다.`);
-                return;
+                return res.send(`${budongsan.selling_price - sessionUser.account_balance}원이 부족합니다.`);
             }
 
             // budongsan delete
@@ -227,25 +223,21 @@ router.post('/budongsan/selling', function (req, res) {
 
 router.post('/budongsan/jeonse/', function (req, res) {
     if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+        return res.redirect('/login');
     }
 
     mydb.collection('budongsan').findOne({ _id: new ObjId(req.body._id) }).then((budongsan) => {
         if (budongsan == null) {
-            res.send('게시물이 존재하지 않습니다.');
-            return;
+            return res.send('해당 매물은 존재하지 않습니다.');
         }
 
         mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
             if (sessionUser == null) {
-                res.redirect('/');  // 세션 유저의 계정이 존재하지 않음
-                return;
+                return res.redirect('/login');  // 세션 유저의 계정이 존재하지 않음
             }
 
             if (budongsan.jeonse_price > sessionUser.account_balance) {
-                res.send(`${budongsan.jeonse_price - sessionUser.account_balance}원이 부족합니다.`);
-                return;
+                return res.send(`${budongsan.jeonse_price - sessionUser.account_balance}원이 부족합니다.`);
             }
 
             // budongsan delete

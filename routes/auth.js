@@ -19,29 +19,7 @@ const passport = require('passport');
 
 ////// Other
 const sha = require('sha256');
-
-function generateRandomAccountNumber() {
-    let accountNumber = '';
-    for (let i = 0; i < 12; i++) {
-        accountNumber += Math.floor(Math.random() * 10);
-    }
-    return accountNumber;
-}
-
-async function generateUniqueAccountNumber() {
-    let accountNumber, result;
-    while (true) {
-        accountNumber = generateRandomAccountNumber();
-        try {
-            result = await mydb.collection('account').findOne({ account_number: accountNumber });
-            if (!result) {
-                return accountNumber;
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }
-}
+const AccountNumber = require('../utils/account_number-generator')
 ///////////////////
 
 ////// Auth
@@ -103,7 +81,7 @@ router.post('/signup', async function (req, res) {
         }
         
         try {
-            const account_number = await generateUniqueAccountNumber();
+            const account_number = await AccountNumber.generateUniqueAccountNumber();
             await mydb.collection('account').insertOne({
                 userid: req.body.userid,
                 userpw: sha(req.body.userpw),
