@@ -30,8 +30,8 @@ passport.serializeUser(function (user, done) {
 });
 
 passport.deserializeUser(function (puserid, done) {
-    mydb.collection('account').findOne({ userid: puserid }).then((result) => {
-        done(null, result);
+    mydb.collection('account').findOne({ userid: puserid }).then((sessionUser) => {
+        done(null, sessionUser);
     });
 });
 
@@ -41,13 +41,13 @@ passport.use(new LocalStrategy({
     session: true,
     passReqToCallback: false,
 }, function (inputid, inputpw, done) {
-    mydb.collection('account').findOne({ userid: inputid }).then((result) => {
-        if (result == null) {
+    mydb.collection('account').findOne({ userid: inputid }).then((sessionUser) => {
+        if (sessionUser == null) {
             return done(null, false, { message: "아이디가 존재하지 않습니다" });;
         }
 
-        if (result.userpw == sha(inputpw)) {
-            return done(null, result);  // 새로운 로그인
+        if (sessionUser.userpw == sha(inputpw)) {
+            return done(null, sessionUser);  // 새로운 로그인
         }
 
         return done(null, false, { message: "비밀번호 틀렸어요" });
