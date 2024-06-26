@@ -45,11 +45,3 @@ APP.use('/', require('./routes/amm'));
 APP.use('/', require('./routes/budongsan'));
 APP.use('/', require('./routes/auth'));
 ////////////////////
-
-////// Home
-APP.get('/', function (req, res) {
-    let user;
-    if (req.session.passport) { user = req.session.passport; } else { user = req.user; }
-    res.render('index.ejs', { user: user });
-});
-////////////////////

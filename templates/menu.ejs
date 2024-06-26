@@ -14,12 +14,23 @@
           <a class="nav-link" href="/amm">자산관리</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/budongsan">부동산</a>
+          <a class="nav-link" href="/budongsan?page=1">부동산</a>
         </li>
       </ul>
-      <div class="navbar-nav ms-auto">
-        <span class="nav-link">Workshop</span>
+      <div class="navbar-nav ms-auto check_uid">
+        <a class="btn btn-primary" href="/login" id="loginA">로그인</a>
       </div>
     </div>
   </div>
 </nav>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/jquery.cookie.js"></script>
+
+<script>
+  const uid=$.cookie('uid');
+  
+  if(uid) {
+    $('.check_uid').html(`<a class="btn btn-danger" href="/logout" id="loginA">로그아웃</a>`);
+  }
+</script>

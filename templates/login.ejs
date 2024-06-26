@@ -46,16 +46,16 @@
     <body>
         <%- include('menu.ejs') %>
 
-        <form action="/login" method="post" onsubmit="return validateForm()">
+        <form action="/login" method="post" id="loginForm" onsubmit="return validateForm()">
             <div class="form-container">
                 <div class="mb-3">
                     <label for="exampleFormControlInput1" class="form-label">아이디</label>
-                    <input name="userid" type="text" class="form-control" id="form_userid" >
+                    <input name="userid" type="text" class="form-control" id="formUserId" >
                     <div id="idError" class="invalid-feedback"></div>
                 </div>
                 <div class="mb-3">
                     <label for="exampleFormControlTextarea1" class="form-label">비밀번호</label>
-                    <input name="userpw" type="password" class="form-control" id="form_userpw" >
+                    <input name="userpw" type="password" class="form-control" id="formUserPassword" >
                     <div id="passwordError" class="invalid-feedback"></div>
                 </div>
                 <button type="submit" class="btn btn-custom">로그인</button>
@@ -64,14 +64,12 @@
 
         <script>
             function validateForm() {
-                let isValid = true;
-
                 const idInput = document.querySelector('input[name="userid"]');
                 const idError = document.getElementById('idError');
                 if (idInput.value.length < 4) {
                     idError.textContent = '아이디는 4자리 이상으로 입력해주세요.';
                     idInput.classList.add('is-invalid');
-                    isValid = false;
+                    return false;
                 } else {
                     idError.textContent = '';
                     idInput.classList.remove('is-invalid');
@@ -82,13 +80,48 @@
                 if (passwordInput.value.length < 4) {
                     passwordError.textContent = '비밀번호는 4자리 이상으로 입력해주세요.';
                     passwordInput.classList.add('is-invalid');
-                    isValid = false;
+                    return false;
                 } else {
                     passwordError.textContent = '';
                     passwordInput.classList.remove('is-invalid');
                 }
+                
+                // 폼 데이터 객체 생성
+                const formData = {
+                    userid: document.getElementById('formUserId').value,
+                    userpw: document.getElementById('formUserPassword').value
+                };
+                
+                // AJAX를 사용하여 서버로 데이터 전송
+                fetch('/check-account', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 로그인 성공 시 '/login' 경로로 폼 제출
+                        document.getElementById('loginForm').submit();
+                    } else {
+                        // 로그인 실패 시 오류 메시지 표시
+                        if (data.message == 'id') {
+                            idError.textContent = "존재하지 않는 아이디입니다.";
+                            idInput.classList.add('is-invalid');
+                        }
+                        else if (data.message == 'pw') {
+                            passwordError.textContent = '잘못된 비밀번호입니다.';
+                            passwordInput.classList.add('is-invalid');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
 
-                return isValid;
+                return false;
             }
         </script>
 

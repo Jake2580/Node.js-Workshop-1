@@ -29,13 +29,13 @@ function generateRandomAccountNumber() {
 }
 
 async function generateUniqueAccountNumber() {
-    let account_number, result;
+    let accountNumber, result;
     while (true) {
-        account_number = generateRandomAccountNumber();
+        accountNumber = generateRandomAccountNumber();
         try {
-            result = await mydb.collection('account').findOne({ account_number: account_number });
+            result = await mydb.collection('account').findOne({ account_number: accountNumber });
             if (!result) {
-                return account_number;
+                return accountNumber;
             }
         } catch (err) {
             console.error(err);
@@ -45,22 +45,46 @@ async function generateUniqueAccountNumber() {
 ///////////////////
 
 ////// Auth
-router.get('/login', function (req, res) {
+router.get('/', function (req, res) {
+    let user;
     if (req.session.passport) {
-        // res.render('index.ejs', { user: req.session.passport });
-        res.redirect('/');
+        user = req.session.passport;
     } else {
-        res.render('login.ejs');
+        user = req.user;
     }
+
+    if (!user) {
+        res.clearCookie('uid', { path: '/' });
+    }
+
+    res.render('index.ejs', { user });
+});
+
+router.get('/login', function (req, res) {
+    if (!req.session.passport) {
+        return res.render('login.ejs');
+    }
+
+    res.redirect('/');
 });
 
 router.post('/login', passport.authenticate('local', { failureRedirect: '/fail', }),
-    function (req, res) {
-        res.redirect('/');
+function (req, res) {
+    res.cookie('uid', req.session.passport.user, {
+        expires: new Date(Date.now() + 60 * 60 * 1000),  // 1 hour
+        path: '/',
     });
+
+    res.redirect('/');
+});
+
+router.get('/fail', function (req, res) {
+    res.render('fail.ejs');
+});
 
 router.get('/logout', function (req, res) {
     req.session.destroy();
+    res.clearCookie('uid', { path: '/' });
     res.redirect('/');
 });
 
@@ -73,7 +97,7 @@ router.post('/signup', async function (req, res) {
         if (result != null) {
             return res.status(500).send('중복되는 아이디입니다.');
         }
-
+        
         if (req.body.userpw.length < 4 || req.body.userid.length < 4) {
             return res.status(500).send('아이디와 비밀번호는 4자리 이상으로 해주세요.');
         }
@@ -90,7 +114,8 @@ router.post('/signup', async function (req, res) {
             }).then((result) => {
                 res.redirect('/');  // 회원가입 성공
             });
-        } catch (err) {
+        }
+        catch (err) {
             console.error(err);
             res.status(500).send('회원가입 실패');
         }
@@ -117,6 +142,23 @@ router.post('/check-id', async (req, res) => {
         console.error('Error checking user ID:', error);
         res.status(500).json({ error: 'An error occurred while checking the user ID.' });
     }
+});
+
+router.post('/check-account', async (req, res) => {
+    let userid = req.body.userid;
+    let userpw = sha(req.body.userpw);
+
+    mydb.collection('account').findOne({ userid }).then((sessionUser) => {
+        if (!sessionUser) {
+            return res.json({ success: false, message: 'id' });
+        }
+
+        if (sessionUser.userpw != userpw) {
+            return res.json({ success: false, message: 'pw' });
+        }
+
+        return res.json({ success: true });
+    });
 });
 ////////////////////
 
