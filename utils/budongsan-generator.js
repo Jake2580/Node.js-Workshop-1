@@ -1,16 +1,7 @@
 const faker = require('faker');
 
 ////// Database
-const { MongoClient } = require('mongodb');
-const ObjId = require('mongodb').ObjectId;
-const DB_URI = process.env.DB_URI;
-let mydb;
-
-MongoClient.connect(DB_URI).then(client => {
-    mydb = client.db('myboard');
-}).catch((err) => {
-    console.log(err);
-});
+const { setup } = require('./db_setup');
 ////////////////////
 
 ////// Other
@@ -36,8 +27,9 @@ function generateApartmentsData(length = 1) {
 
 async function insertApartmentsData(length = 1) {
     try {
-        result = await mydb.collection('budongsan').insertMany(generateApartmentsData(length));
-        return result;
+        const { mongodb } = await setup();
+        const insertResult = await mongodb.collection('budongsan').insertMany(generateApartmentsData(length));
+        return insertResult;
     } catch (err) {
         console.err(err);
     }

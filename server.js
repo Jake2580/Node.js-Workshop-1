@@ -1,47 +1,35 @@
-const express = require('express');
-const APP = express();
+// DB Setup
+const { setup } = require('./utils/db_setup');
 
+// Express
+const express = require('express');
+const app = express();
+
+// Dotenv
 const dotenv = require('dotenv').config();
-const HOST = process.env.HOST;
 const PORT = process.env.PORT;
 
+// Body-parser
 const bodyParser = require('body-parser');
-APP.use(bodyParser.urlencoded({ extended: true }));
-APP.use(bodyParser.json());  // /check-id POST 요청 시 필요함
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());  // /check-id POST 요청 시 필요함
 
-////// templates, public
+// templates, public
 const path = require('path');
-APP.set('views', path.join(__dirname, 'templates'));
-APP.set('view engine', 'ejs');
-APP.use(express.static('public'));
-////////////////////
+app.set('views', path.join(__dirname, 'templates'));
+app.set('view engine', 'ejs');
+app.use(express.static('public'));
 
-////// Database
-const { MongoClient } = require('mongodb');
-const DB_URI = dotenv.parsed.DB_URI;
-let mydb;
-
-MongoClient.connect(DB_URI).then(client => {
-    mydb = client.db('myboard');
-    APP.listen(PORT, function () {
-        console.log(`SERVER READY! http://${HOST}:${PORT}`);
-    });
-}).catch((err) => {
-    console.log(err);
+// listen
+app.listen(PORT, function () {
+    console.log(`SERVER READY! http://127.0.0.1:${PORT}`);
 });
-////////////////////
 
-////// Session 및 Passport 설정
-const session = require('express-session');
-const routes_session = require('./routes/session');
+// session
+const { sessionConfig } = require('./routes/session');
+app.use(sessionConfig);
 
-APP.use(session(routes_session.session_config));
-APP.use(routes_session.passport.initialize());
-APP.use(routes_session.passport.session());
-////////////////////
-
-////// Routes
-APP.use('/', require('./routes/amm'));
-APP.use('/', require('./routes/budongsan'));
-APP.use('/', require('./routes/auth'));
-////////////////////
+// Routes
+app.use('/', require('./routes/auth'));
+app.use('/', require('./routes/amm'));
+app.use('/', require('./routes/budongsan'));
