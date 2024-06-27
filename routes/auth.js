@@ -1,64 +1,53 @@
 let router = require('express').Router();
 
-////// Database
-const { MongoClient } = require('mongodb');
-const ObjId = require('mongodb').ObjectId;
-const DB_URI = process.env.DB_URI;
-let mydb;
-
-MongoClient.connect(DB_URI).then(client => {
-    mydb = client.db('myboard');
-}).catch((err) => {
-    console.log(err);
-});
-////////////////////
-
-////// Passport
-const passport = require('passport');
-////////////////////
-
-////// Other
 const sha = require('sha256');
-const AccountNumber = require('../utils/account_number-generator')
-///////////////////
+const AccountNumber = require('../utils/account-number-generator');
+const { setup } = require('../utils/db_setup');
 
-////// Auth
-router.get('/', function (req, res) {
-    let user;
-    if (req.session.passport) {
-        user = req.session.passport;
-    } else {
-        user = req.user;
-    }
-
-    if (!user) {
+router.get('/', async function (req, res) {
+    if (!req.session.user) {
         res.clearCookie('uid', { path: '/' });
     }
 
-    res.render('index.ejs', { user });
+    res.render('index.ejs', { user : req.session.user });
 });
 
-router.get('/login', function (req, res) {
-    if (!req.session.passport) {
+router.get('/login', async function (req, res) {
+    if (!req.session.user) {
         return res.render('login.ejs');
     }
 
     res.redirect('/');
 });
 
-router.post('/login', passport.authenticate('local', { failureRedirect: '/fail', }),
-function (req, res) {
-    res.cookie('uid', req.session.passport.user, {
-        expires: new Date(Date.now() + 60 * 60 * 1000),  // 1 hour
-        path: '/',
+router.post('/login', async function (req, res) {
+    const { mongodb } = await setup();
+    mongodb.collection('account').findOne({ userid: req.body.userid }).then((sessionUser) => {
+        if (!sessionUser) {  // 계정 없음
+            return res.render('login.ejs', { data: { alertMsg: '다시 로그인 해주세요.' } });
+        }
+        
+        if (sessionUser.userpw != sha(req.body.userpw)) {  // 비밀번호 틀림
+            return res.render('login.ejs', { data: { alertMsg: '다시 로그인 해주세요.' } });
+        }
+        
+        req.session.user = { userid: req.body.userid };  // 로그인 성공
+        res.cookie('uid', req.body.userid);
+        return res.redirect('/');
+    }).catch((err) => {
+        res.render('login.ejs', { data: { alertMsg: '다시 로그인 해주세요.' } });
     });
-
-    res.redirect('/');
 });
 
-router.get('/fail', function (req, res) {
-    res.render('fail.ejs');
-});
+// router.post('/login', passport.authenticate('local', { failureRedirect: '/fail', }),
+// function (req, res) {
+//     res.cookie('uid', req.session.user.user, {
+//         expires: new Date(Date.now() + 60 * 60 * 1000),  // 1 hour
+//         path: '/',
+//     });
+
+//     res.redirect('/');
+// });
 
 router.get('/logout', function (req, res) {
     req.session.destroy();
@@ -71,7 +60,8 @@ router.get('/signup', function (req, res) {
 });
 
 router.post('/signup', async function (req, res) {
-    mydb.collection('account').findOne({ userid: req.body.userid }).then(async (result) => {
+    const { mongodb } = await setup();
+    mongodb.collection('account').findOne({ userid: req.body.userid }).then(async (result) => {
         if (result != null) {
             return res.status(500).send('중복되는 아이디입니다.');
         }
@@ -82,7 +72,7 @@ router.post('/signup', async function (req, res) {
         
         try {
             const account_number = await AccountNumber.generateUniqueAccountNumber();
-            await mydb.collection('account').insertOne({
+            await mongodb.collection('account').insertOne({
                 userid: req.body.userid,
                 userpw: sha(req.body.userpw),
                 account_number: account_number,
@@ -101,15 +91,16 @@ router.post('/signup', async function (req, res) {
 });
 ////////////////////
 
-////// signup check id
-router.post('/check-id', async (req, res) => {
+//// signup check id
+router.post('/check-id', async function (req, res) {
     try {
         if (req.body.userid == undefined) {
             res.json({ isDuplicate: true });
             return;
         }
         
-        const existingUser = await mydb.collection('account').findOne({ userid: req.body.userid });
+        const { mongodb } = await setup();
+        const existingUser = await mongodb.collection('account').findOne({ userid: req.body.userid });
         
         if (existingUser) {
             res.json({ isDuplicate: true });
@@ -122,19 +113,20 @@ router.post('/check-id', async (req, res) => {
     }
 });
 
-router.post('/check-account', async (req, res) => {
+router.post('/check-account', async function (req, res) {
     let userid = req.body.userid;
     let userpw = sha(req.body.userpw);
 
-    mydb.collection('account').findOne({ userid }).then((sessionUser) => {
+    const { mongodb } = await setup();
+    mongodb.collection('account').findOne({ userid }).then((sessionUser) => {
         if (!sessionUser) {
             return res.json({ success: false, message: 'id' });
         }
-
+        
         if (sessionUser.userpw != userpw) {
             return res.json({ success: false, message: 'pw' });
         }
-
+        
         return res.json({ success: true });
     });
 });

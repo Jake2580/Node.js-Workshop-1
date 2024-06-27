@@ -1,15 +1,4 @@
-////// Database
-const { MongoClient } = require('mongodb');
-const ObjId = require('mongodb').ObjectId;
-const DB_URI = process.env.DB_URI;
-let mydb;
-
-MongoClient.connect(DB_URI).then(client => {
-    mydb = client.db('myboard');
-}).catch((err) => {
-    console.log(err);
-});
-////////////////////
+const { setup } = require('./db_setup');
 
 function generateRandomAccountNumber() {
     let accountNumber = '';
@@ -21,10 +10,12 @@ function generateRandomAccountNumber() {
 
 async function generateUniqueAccountNumber() {
     let accountNumber, result;
+    const { mongodb } = await setup();
+    
     while (true) {
         accountNumber = generateRandomAccountNumber();
         try {
-            result = await mydb.collection('account').findOne({ account_number: accountNumber });
+            result = await mongodb.collection('account').findOne({ account_number: accountNumber });
             if (!result) {
                 return accountNumber;
             }

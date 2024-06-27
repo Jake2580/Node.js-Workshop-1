@@ -1,49 +1,35 @@
 let router = require('express').Router();
 
-////// Database
-const { MongoClient } = require('mongodb');
-const ObjId = require('mongodb').ObjectId;
-const DB_URI = process.env.DB_URI;
-let mydb;
-
-MongoClient.connect(DB_URI).then(client => {
-    mydb = client.db('myboard');
-}).catch((err) => {
-    console.log(err);
-});
-////////////////////
-
-////// Other
-const Format = require('../utils/format')
+const Format = require('../utils/format');
 const BudongsanGenerator = require('../utils/budongsan-generator');
-////////////////////
+const mongodb = require('mongodb');
+const ObjectId = mongodb.ObjectId;
+const { setup } = require('../utils/db_setup');
 
 ////// Generator
 router.get('/budongsan/generator/:size', async function (req, res) {
-    if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+    if (!req.session.user) {
+        return res.redirect('/login');
     }
 
-    if (req.session.passport.user != 'admin') {
-        res.send('당신은 권한이 없습니다.');
-        return;
+    if (req.session.user.userid != 'admin') {
+        return res.send('당신은 권한이 없습니다.');
     }
 
     const length = Number(req.params.size);
     if (length == NaN || length < 1) {
-        res.send('제대로 입력해주세요.');
-        return;
+        return res.send('제대로 입력해주세요.');
     }
 
     budongsans = BudongsanGenerator.generateApartmentsData(length);
-    result = await mydb.collection('budongsan').insertMany(budongsans);
+    const { mongodb } = await setup();
+    result = await mongodb.collection('budongsan').insertMany(budongsans);
     res.send(result);
 });
 ////////////////////
 
-////// 부동산
-router.get('/budongsan', function (req, res) {
+// 부동산 매물
+router.get('/budongsan', async function (req, res) {
     let currentPage = Number(req.query.page);
     if (!currentPage) {
         currentPage = 1;
@@ -52,8 +38,10 @@ router.get('/budongsan', function (req, res) {
     const itemsPerPage = 50;  // 한번에 얼만큼의 게시물을 뿌려줄 것인가.
     const paginationWindowSize = 15;  // 맨 아래에 있는 2번째 페이지 크기 설정
     const skipCount = (currentPage - 1) * itemsPerPage;
-    mydb.collection('budongsan').find().sort({ updated_at: -1 }).skip(skipCount).limit(itemsPerPage).toArray().then((budongsans) => {
-        mydb.collection('budongsan').countDocuments({}).then((budongsanCount) => {
+
+    const { mongodb } = await setup();
+    mongodb.collection('budongsan').find().sort({ updated_at: -1 }).skip(skipCount).limit(itemsPerPage).toArray().then((budongsans) => {
+        mongodb.collection('budongsan').countDocuments({}).then((budongsanCount) => {
             let pageSize = Math.ceil(budongsanCount / itemsPerPage);  // 최대 페이지 크기
             let startNumber = (Math.floor((currentPage - 1) / paginationWindowSize) * paginationWindowSize) + 1;  // 페이지의 첫 숫자
             res.render('budongsan.ejs', { 
@@ -64,23 +52,24 @@ router.get('/budongsan', function (req, res) {
     });
 });
 
-router.get('/budongsan/enter', function (req, res) {
-    if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+// 부동산 매물 등록 페이지
+router.get('/budongsan/enter', async function (req, res) {
+    if (!req.session.user) {
+        return res.redirect('/login');
     }
 
     res.render('budongsan_enter.ejs');
 });
 
-router.post('/budongsan/save', function (req, res) {
-    if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+// 부동산 매물 등록
+router.post('/budongsan/save', async function (req, res) {
+    if (!req.session.user) {
+        return res.redirect('/login');
     }
 
-    mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sellerUser) => {
-        mydb.collection('budongsan').insertOne({
+    const { mongodb } = await setup();
+    mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sellerUser) => {
+        mongodb.collection('budongsan').insertOne({
             title: req.body.title,
             address: req.body.address,
             city: req.body.city,
@@ -97,16 +86,18 @@ router.post('/budongsan/save', function (req, res) {
     });
 });
 
-router.get('/budongsan/:_id', function (req, res) {
+// 부동산 매물 Content
+router.get('/budongsan/:_id', async function (req, res) {
     if (req.params._id.length !== 24) {
         return res.status(400).send('Invalid ObjectId format');
     }
 
+    const { mongodb } = await setup();
     let seller = false;
-    mydb.collection('budongsan').findOne({ _id: new ObjId(req.params._id) }).then(async (budongsan) => {
+    mongodb.collection('budongsan').findOne({ _id: ObjectId.createFromHexString(req.params._id) }).then(async (budongsan) => {
         try {
-            if (req.session.passport) {
-                await mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
+            if (req.session.user) {
+                await mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sessionUser) => {
                     if (sessionUser._id.toString() == budongsan.seller || sessionUser.userid == 'admin') {
                         seller = true;
                     }
@@ -125,18 +116,19 @@ router.get('/budongsan/:_id', function (req, res) {
     });
 });
 
-router.get('/budongsan/edit/:_id', function (req, res) {
-    if (!req.session.passport) {
+// 부동산 매물 수정 페이지
+router.get('/budongsan/edit/:_id', async function (req, res) {
+    if (!req.session.user) {
         return res.redirect('/login');
     }
 
-    mydb.collection('budongsan').findOne({ _id: new ObjId(req.params._id) }).then((budongsan) => {
-        let userid = req.session.passport.user;
-        mydb.collection('account').findOne({ userid }).then((sessionUser) => {
-            if (sessionUser._id.toString() != budongsan.seller && userid != 'admin') {
+    const { mongodb } = await setup();
+    mongodb.collection('budongsan').findOne({ _id: ObjectId.createFromHexString(req.params._id) }).then((budongsan) => {
+        mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sessionUser) => {
+            if (sessionUser._id.toString() != budongsan.seller && req.session.user.userid != 'admin') {
                 return res.send('당신은 권한이 없습니다.');
             }
-
+            
             res.render('budongsan_edit.ejs', { data: budongsan });
         });
     }).catch(err => {
@@ -145,8 +137,10 @@ router.get('/budongsan/edit/:_id', function (req, res) {
     });
 });
 
-router.post('/budongsan/edit', function (req, res) {
-    mydb.collection('budongsan').updateOne({ _id: new ObjId(req.body._id) }, {
+// 부동산 매물 수정
+router.post('/budongsan/edit', async function (req, res) {
+    const { mongodb } = await setup();
+    mongodb.collection('budongsan').updateOne({ _id: ObjectId.createFromHexString(req.body._id) }, {
         $set: {
             title: req.body.title,
             address: req.body.address,
@@ -162,36 +156,38 @@ router.post('/budongsan/edit', function (req, res) {
     });
 });
 
-router.post('/budongsan/delete', function (req, res) {
-    if (!req.session.passport) {
-        res.redirect('/login');
-        return;
+// 부동산 매물 삭제
+router.post('/budongsan/delete', async function (req, res) {
+    if (!req.session.user) {
+        return res.redirect('/login');
     }
 
-    let userid = req.session.passport.user;
-    mydb.collection('account').findOne({ userid }).then((sessionUser) => {
-        if (sessionUser._id.toString() != req.body.seller && userid != 'admin') {
+    const { mongodb } = await setup();
+    mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sessionUser) => {
+        if (sessionUser._id.toString() != req.body.seller && req.session.user.userid != 'admin') {
             return res.send('당신은 권한이 없습니다.');
         }
         
-        req.body._id = new ObjId(req.body._id);
-        mydb.collection('budongsan').deleteOne(req.body).then((deleteResult) => {
+        req.body._id = ObjectId.createFromHexString(req.body._id);
+        mongodb.collection('budongsan').deleteOne(req.body).then((deleteResult) => {
             res.redirect('/budongsan');  // 삭제 완료
         });
     });
 });
 
-router.post('/budongsan/selling', function (req, res) {
-    if (!req.session.passport) {
+// 부동산 매물 매매가
+router.post('/budongsan/selling', async function (req, res) {
+    if (!req.session.user) {
         return res.redirect('/login');
     }
 
-    mydb.collection('budongsan').findOne({ _id: new ObjId(req.body._id) }).then((budongsan) => {
+    const { mongodb } = await setup();
+    mongodb.collection('budongsan').findOne({ _id: ObjectId.createFromHexString(req.body._id) }).then((budongsan) => {
         if (budongsan == null) {
             return res.send('해당 매물은 존재하지 않습니다.');
         }
 
-        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
+        mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sessionUser) => {
             if (sessionUser == null) {
                 return res.redirect('/login');
             }
@@ -201,17 +197,17 @@ router.post('/budongsan/selling', function (req, res) {
             }
 
             // budongsan delete
-            mydb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
+            mongodb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
 
             // session_user account_balance update
-            mydb.collection('account').updateOne({ _id: sessionUser._id }, {
+            mongodb.collection('account').updateOne({ _id: sessionUser._id }, {
                 $set: { account_balance: sessionUser.account_balance - budongsan.selling_price }
             }).then((updateResult) => { });
 
             // seller account_balance update
-            const _id = new ObjId(budongsan.seller);
-            mydb.collection('account').findOne({ _id }).then((sellerUser) => {
-                mydb.collection('account').updateOne({ _id }, {
+            const _id = ObjectId.createFromHexString(budongsan.seller);
+            mongodb.collection('account').findOne({ _id }).then((sellerUser) => {
+                mongodb.collection('account').updateOne({ _id }, {
                     $set: { account_balance: sellerUser.account_balance + budongsan.selling_price }
                 }).then((result) => {
                     res.redirect('/budongsan');
@@ -221,19 +217,21 @@ router.post('/budongsan/selling', function (req, res) {
     });
 });
 
-router.post('/budongsan/jeonse/', function (req, res) {
-    if (!req.session.passport) {
+// 부동산 매물 전세가
+router.post('/budongsan/jeonse/', async function (req, res) {
+    if (!req.session.user) {
         return res.redirect('/login');
     }
 
-    mydb.collection('budongsan').findOne({ _id: new ObjId(req.body._id) }).then((budongsan) => {
+    const { mongodb } = await setup();
+    mongodb.collection('budongsan').findOne({ _id: ObjectId.createFromHexString(req.body._id) }).then((budongsan) => {
         if (budongsan == null) {
             return res.send('해당 매물은 존재하지 않습니다.');
         }
 
-        mydb.collection('account').findOne({ userid: req.session.passport.user }).then((sessionUser) => {
-            if (sessionUser == null) {
-                return res.redirect('/login');  // 세션 유저의 계정이 존재하지 않음
+        mongodb.collection('account').findOne({ userid: req.session.user.userid }).then((sessionUser) => {
+            if (sessionUser == null) {  // 세션 유저의 계정이 존재하지 않음
+                return res.redirect('/login');
             }
 
             if (budongsan.jeonse_price > sessionUser.account_balance) {
@@ -241,17 +239,17 @@ router.post('/budongsan/jeonse/', function (req, res) {
             }
 
             // budongsan delete
-            mydb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
+            mongodb.collection('budongsan').deleteOne(budongsan).then(deleteResult => { });
 
             // account_balance update
-            mydb.collection('account').updateOne({ _id: sessionUser._id }, {
+            mongodb.collection('account').updateOne({ _id: sessionUser._id }, {
                 $set: { account_balance: sessionUser.account_balance - budongsan.jeonse_price }
             }).then((updateResult) => { });
 
             // seller account_balance update
-            const _id = new ObjId(budongsan.seller);
-            mydb.collection('account').findOne({ _id }).then((seller) => {
-                mydb.collection('account').updateOne({ _id }, {
+            const _id = ObjectId.createFromHexString(budongsan.seller);
+            mongodb.collection('account').findOne({ _id }).then((seller) => {
+                mongodb.collection('account').updateOne({ _id }, {
                     $set: { account_balance: seller.account_balance + budongsan.jeonse_price }
                 }).then((result) => {
                     res.redirect('/budongsan');
@@ -260,6 +258,5 @@ router.post('/budongsan/jeonse/', function (req, res) {
         });
     });
 });
-////////////////////
 
 module.exports = router;
